@@ -1,0 +1,26 @@
+﻿=== SYSTEM PROGRAMMING: MULTITHREADING TASK ===
+
+Project Goal: 
+Create a high-performance file analyzer that uses multiple threads.
+This approach allows us to utilize all CPU cores effectively.
+
+Key concepts we are practicing:
+1. Process: The container for our application.
+2. Thread: The worker that performs the counting logic.
+3. ConcurrentQueue: A thread-safe way to distribute files.
+4. Interlocked: Atomic operations for global statistics.
+
+The application must handle:
+- Directory scanning (recursive)
+- Thread management (starting and joining)
+- Data aggregation (collecting all results)
+
+Sample data for counting:
+Line 1: Word
+Line 2: Word Word
+Line 3: Word Word Word
+
+Current status: Waiting for the student to write the code.
+Success is inevitable if you understand how threads work!
+
+=== END OF FILE ===

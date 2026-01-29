@@ -1,0 +1,15 @@
+﻿ID	NAME			TYPE		SIZE(KB)	STATUS
+001	Kernel_Task		System		4096		Running
+002	UI_Renderer		User		15240		Suspended
+003	Network_Driver		Driver		2048		Active
+004	Garbage_Collector	Internal	512		Waiting
+
+-----------------------------------------------------------
+Detailed Description:
+The Garbage Collector (GC) is responsible for automatic memory management.
+It runs on a separate thread to avoid blocking the main execution flow.
+When the heap is full, the GC triggers a collection cycle.
+-----------------------------------------------------------
+
+Footnote: This is a tab-separated values imitation. 
+Total entries: 4.

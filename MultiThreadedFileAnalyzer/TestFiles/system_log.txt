@@ -1,0 +1,21 @@
+﻿[2026-01-28 18:05:01] INFO: Process "SystemAnalyzer.exe" started with PID: 14208.
+[2026-01-28 18:05:02] DEBUG: Loading module "MathLib.dll" into memory scope.
+[2026-01-28 18:05:03] WARNING: Thread 4 is waiting for a handle to be released.
+[2026-01-28 18:05:05] ERROR: Access denied to security context of "wininit.exe".
+
+--- SYSTEM RESOURCE SNAPSHOT ---
+CPU Usage: 15%
+Memory Set: 256MB
+Active Threads: 8
+Total Handles: 450
+
+Performance metrics:
+1. File IO operations: 1200 ms
+2. Context switches: 45000 / sec
+3. Virtual memory: 2048MB
+
+Note: Multi-threading performance is currently optimal.
+No memory leaks detected in the current session.
+All environment variables are successfully synchronized.
+
+[2026-01-28 18:06:00] STATUS: Analysis complete. 0 errors found.
