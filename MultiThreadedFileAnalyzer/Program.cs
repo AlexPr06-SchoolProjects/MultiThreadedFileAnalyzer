@@ -39,7 +39,6 @@ foreach (var file in fileStatisticsList)
     Console.WriteLine($"{file.FileName}: Lines:{file.LinesCount} WordsCount: {file.WordsCount} CharactersCount: {file.CharactersCount}");
 }
 
-
 List<IFileStatistics> ProcessFilesInParallel(
     Semaphore semaphore, string directoryPath, FileStatisticsManager fsm, 
     ConcurrentStack<FileTask> fileNamesStack, int maxThreads)
