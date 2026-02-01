@@ -1,6 +1,6 @@
 ﻿using MultiThreadedFileAnalyzer.Interfaces;
 
-namespace MultiThreadedFileAnalyzer.Classes;
+namespace MultiThreadedFileAnalyzer.Classes.FileProcessor;
 
 class FileStatistics : IFileStatistics
 {

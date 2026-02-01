@@ -1,8 +1,10 @@
-﻿using MultiThreadedFileAnalyzer.Interfaces;
+﻿using MultiThreadedFileAnalyzer.Classes.Logs;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
-namespace MultiThreadedFileAnalyzer.Classes
+using MenuClass = MultiThreadedFileAnalyzer.Classes.Menu.Menu;
+
+namespace MultiThreadedFileAnalyzer.Classes.App
 {
 
     internal class AppLayout
@@ -43,7 +45,7 @@ namespace MultiThreadedFileAnalyzer.Classes
             _leftBottomLayout = new Layout(_leftBottomLayoutName);
         }
 
-        public void UpdateMenu(Menu menu)
+        public void UpdateMenu(MenuClass menu)
         {
             _leftUpperLayout.Update(menu.OwnRender());
             RefreshLayout();
@@ -214,10 +216,10 @@ namespace MultiThreadedFileAnalyzer.Classes
             var path = Directory.GetCurrentDirectory();
 
             var pathText = new TextPath(path)
-                 .RootColor(Spectre.Console.Color.Chartreuse2_1)
-                .SeparatorColor(Spectre.Console.Color.Grey)
-                .StemColor(Spectre.Console.Color.Cornsilk1)
-                .LeafColor(Spectre.Console.Color.Chartreuse3);
+                 .RootColor(Color.Chartreuse2_1)
+                .SeparatorColor(Color.Grey)
+                .StemColor(Color.Cornsilk1)
+                .LeafColor(Color.Chartreuse3);
        
 
             var panel = new Panel(pathText)

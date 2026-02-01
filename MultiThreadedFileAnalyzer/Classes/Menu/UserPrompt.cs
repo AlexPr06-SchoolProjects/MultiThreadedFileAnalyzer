@@ -2,7 +2,7 @@
 using Spectre.Console;
 using System.IO;
 
-namespace MultiThreadedFileAnalyzer.Classes;
+namespace MultiThreadedFileAnalyzer.Classes.Menu;
 internal abstract class UserPromptInt : IPromptable<int>
 {
     abstract public int Prompt();
@@ -63,7 +63,7 @@ internal class UserPromptDirectory : UserPromptString
         if (directoryPath.Trim().Equals("exit", StringComparison.OrdinalIgnoreCase))
         {
             AnsiConsole.MarkupLine("[yellow]Операция отменена пользователем.[/]");
-            return String.Empty;
+            return string.Empty;
         }
 
         return directoryPath;

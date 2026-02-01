@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 
-namespace MultiThreadedFileAnalyzer.Classes;
+namespace MultiThreadedFileAnalyzer.Classes.FileProcessor;
 
 internal class FileStatisticsManager : IAnalizable, IMenuOptionParams
 {

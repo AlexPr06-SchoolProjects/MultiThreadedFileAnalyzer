@@ -1,9 +1,14 @@
-﻿using MultiThreadedFileAnalyzer.Interfaces;
+﻿using MultiThreadedFileAnalyzer.Classes.App;
+using MultiThreadedFileAnalyzer.Classes.FileProcessor;
+using MultiThreadedFileAnalyzer.Interfaces;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 using System.Collections.Concurrent;
 
-namespace MultiThreadedFileAnalyzer.Classes;
+using FileProcessorClass =  MultiThreadedFileAnalyzer.Classes.FileProcessor.FileProcessor;
+
+
+namespace MultiThreadedFileAnalyzer.Classes.Menu;
 
 internal abstract class MenuOption : IExecutable
 {
@@ -15,7 +20,6 @@ internal abstract class MenuOption : IExecutable
 
 internal abstract class MenuOption<T> : MenuOption where T : IMenuOptionParams
 {
-    protected T _params;
     public MenuOption(string text) : base(text) { }
     abstract public void AddParams(T paramsObj);
 }
@@ -26,14 +30,14 @@ class MenuOptionWorkParams : IMenuOptionParams
     public AppLayout appLayout { get; set; }
     public UserPromptDirectory userPromptDirectory { get; set; }
     public UserPromptThreads userPromptThreads { get; set; }
-    public FileProcessor fileProcessor { get; set; }
-    public FileStatisticsManager fileStatisticsManager { get; set; }
+    public FileProcessorClass fileProcessor { get; set; }
+    public FileStatisticsManager fileStatisticsManager { get; set; }       
 
     public MenuOptionWorkParams(
         AppLayout appLayout, 
         UserPromptDirectory userPromptDirectory,
         UserPromptThreads userPromptThreads,
-        FileProcessor fileProcessor,
+        FileProcessorClass fileProcessor,
         FileStatisticsManager fileStatisticsManager)
     {
         this.appLayout = appLayout;
@@ -57,7 +61,7 @@ internal class MenuOptionWork : MenuOption<MenuOptionWorkParams>
         _menuOptionWorkParams.appLayout.ShowCurrentDirectory();
         string directoryPath = _menuOptionWorkParams.userPromptDirectory.Prompt();
 
-        if (directoryPath == String.Empty)
+        if (directoryPath == string.Empty)
         {
             _menuOptionWorkParams.appLayout.ShowErrorMessage($"No directory path was provided.");
             return;
@@ -65,8 +69,16 @@ internal class MenuOptionWork : MenuOption<MenuOptionWorkParams>
 
         _menuOptionWorkParams.fileProcessor.DirectoryPath = directoryPath;
         int numberOfThreads = _menuOptionWorkParams.userPromptThreads.Prompt();
-
-        string[]? fileNames = _menuOptionWorkParams.fileProcessor.FindAllTxtFiles(directoryPath);
+        string[]? fileNames = null;
+        try
+        {
+            fileNames = _menuOptionWorkParams.fileProcessor.FindAllTxtFiles(directoryPath);
+        }
+        catch (Exception ex)
+        {
+            _menuOptionWorkParams.appLayout.ShowErrorMessage($"{ex.Message}"); 
+            return;
+        }
         if (fileNames is null)
         {
             _menuOptionWorkParams.appLayout.ShowErrorMessage($"No files founded in provided directory");
@@ -118,7 +130,7 @@ internal class Menu : IOwnRenderable
     {
         var table = new Table()
             .RoundedBorder()
-            .BorderColor(Spectre.Console.Color.Grey35)
+            .BorderColor(Color.Grey35)
             .Expand()
             .Title("[bold yellow]ДОСТУПНЫЕ ДЕЙСТВИЯ[/]")
             .Caption("[grey]Используйте цифры для навигации[/]");
@@ -131,7 +143,7 @@ internal class Menu : IOwnRenderable
 
         for (int i = 0; i < _options.Count; i++)
         {
-            var color = (i % 2 == 0) ? "white" : "cyan1";
+            var color = i % 2 == 0 ? "white" : "cyan1";
             table.AddRow($"[grey]{i + 1}[/]", $"[{color}]{_options[i].Text}[/]");
         }
 

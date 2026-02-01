@@ -1,13 +1,20 @@
-﻿using MultiThreadedFileAnalyzer.Interfaces;
+﻿using MultiThreadedFileAnalyzer.Classes.FileProcessor;
+using MultiThreadedFileAnalyzer.Classes.Logs;
+using MultiThreadedFileAnalyzer.Classes.Menu;
+using MultiThreadedFileAnalyzer.Interfaces;
 using System.Collections.Concurrent;
 
-namespace MultiThreadedFileAnalyzer.Classes;
+using FileProcessorClass = MultiThreadedFileAnalyzer.Classes.FileProcessor.FileProcessor;
+using MenuClass = MultiThreadedFileAnalyzer.Classes.Menu.Menu;
+
+namespace MultiThreadedFileAnalyzer.Classes.App;
 
 internal class App
 {
+    private AppCleaner _appCleaner;
     private AppLayout _appLayout;
     private AppLoopConditions _appConditions;
-    private Menu _menu;
+    private MenuClass _menu;
     private List<MenuOption> _menuOptions;
 
     private UserPromptThreads _userPromptThreads;
@@ -22,13 +29,14 @@ internal class App
     private LogPool _serviceItemsPool;
     private LogPool _allLogs;
 
-    private FileProcessor _fileProcessor;
+    private FileProcessorClass _fileProcessor;
 
     public App(AppLoopConditions appConditions)
     {
+        _appCleaner = new AppCleaner();
         _appLayout = new AppLayout();
         _appConditions = appConditions;
-        _menu = new Menu();
+        _menu = new MenuClass();
         _menuOptions = new List<MenuOption>();
         _menuOptions.Add(new MenuOptionWork("Начать работу"));
         _menuOptions.Add(new MenuOptionWork("Очистить"));
@@ -46,7 +54,14 @@ internal class App
         _serviceItemsPool = new LogPool();
         _allLogs = new LogPool();
 
-        _fileProcessor = new FileProcessor(_failedItemsPool, _successfulItemsPool, _serviceItemsPool, _allLogs, String.Empty);
+        _fileProcessor = new FileProcessorClass(_failedItemsPool, _successfulItemsPool, _serviceItemsPool, _allLogs, string.Empty);
+
+
+
+        _appCleaner.AddSome(new List<ICleanable>()
+        {
+            _failedItemsPool, _successfulItemsPool, _serviceItemsPool, _allLogs
+        });
     }
 
     public void SetAppConditions(List<ICondition> conditions) => _appConditions.AddSome(conditions);
@@ -74,17 +89,16 @@ internal class App
             }
             selectedOption.Execute();
             _appLayout.LogsRenderForLayout(_serviceItemsPool, 3, "[bold yellow] Последние логи [/]");
-            _appLayout.LogsRenderIntoConsole(_allLogs, 1, "[bold blue] Все логи [/]");
 
             bool showMoreLogs = _userPromptShowMoreLogs.Prompt();
             if (showMoreLogs) {
                 List<LogPool> logs = new List<LogPool>() { _successfulItemsPool, _failedItemsPool, _serviceItemsPool, _allLogs  };
                 List<int> logsColumns = new List<int>() { 1, 1, 1, 1 };
-                List<string> logsColumnNames = new List<string>(){ "✅ УСПЕШНО", "❌ ОШИБКИ", "⚙ СЕРВИСНЫЕ",  "📝 ВЕСТЬ ЛОГ" };
+                List<string> logsColumnNames = new List<string>(){ "✅ УСПЕШНО", "❌ ОШИБКИ", "⚙ СЕРВИСНЫЕ",  "📝 ВСЕ ЛОГИ" };
                 _appLayout.RenderAllLogsIntoConsole(logs, logsColumns, logsColumnNames);
             }
 
-            //TODO: Реализовать очситку логов и не нужной информации либо же реализовать кеш
+            _appCleaner.CleanAll();
 
             exitApp = _userPromptInApp.Prompt();
         }

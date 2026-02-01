@@ -1,6 +1,6 @@
 ﻿using MultiThreadedFileAnalyzer.Interfaces;
 
-namespace MultiThreadedFileAnalyzer.Classes
+namespace MultiThreadedFileAnalyzer.Classes.App
 {
 
     class Conditon : ICondition

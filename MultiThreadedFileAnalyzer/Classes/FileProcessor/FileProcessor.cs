@@ -1,9 +1,10 @@
-﻿using MultiThreadedFileAnalyzer.Constants;
+﻿using MultiThreadedFileAnalyzer.Classes.Logs;
+using MultiThreadedFileAnalyzer.Constants;
 using MultiThreadedFileAnalyzer.Interfaces;
 using Spectre.Console;
 using System.Collections.Concurrent;
 
-namespace MultiThreadedFileAnalyzer.Classes
+namespace MultiThreadedFileAnalyzer.Classes.FileProcessor
 {
     internal class FileProcessor
     {
@@ -106,14 +107,15 @@ namespace MultiThreadedFileAnalyzer.Classes
             }
         }
 
+        // Try-catch wrapper required(i.e. access is denied)
         public string[]? FindAllTxtFiles(string directoryPath)
         {
-            if (!Directory.Exists(directoryPath))
-                return null;
+                if (!Directory.Exists(directoryPath))
+                    return null;
 
-            string rootPath = Path.GetFullPath(directoryPath);
-            var fullPaths = Directory.GetFiles(rootPath, "*.txt", SearchOption.AllDirectories);
-            return fullPaths.Select(path => Path.GetRelativePath(rootPath, path)).ToArray();
+                string rootPath = Path.GetFullPath(directoryPath);
+                var fullPaths = Directory.GetFiles(rootPath, "*.txt", SearchOption.AllDirectories);
+                return fullPaths.Select(path => Path.GetRelativePath(rootPath, path)).ToArray();
         }
     }
 }
