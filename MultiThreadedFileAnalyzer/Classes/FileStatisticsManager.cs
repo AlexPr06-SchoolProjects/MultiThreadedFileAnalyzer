@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace MultiThreadedFileAnalyzer.Classes;
 
-internal class FileStatisticsManager : IAnalizable
+internal class FileStatisticsManager : IAnalizable, IMenuOptionParams
 {
     public IFileStatistics Analize(string filePath)
     {
@@ -65,17 +65,6 @@ internal class FileStatisticsManager : IAnalizable
 
         return fileStatistics;
     }
-
-    public string[]? FindAllTxtFiles(string directoryPath)
-    {
-        if (!Directory.Exists(directoryPath))
-            return null;
-
-        string rootPath = Path.GetFullPath(directoryPath);
-        var fullPaths = Directory.GetFiles(rootPath, "*.txt", SearchOption.AllDirectories);
-        return fullPaths.Select(path => Path.GetRelativePath(rootPath, path)).ToArray();
-    }
-
 
     public ConcurrentStack<FileTask>? PutFilesIntoStack(string directoryPath, string[] files)
     {
