@@ -1,6 +1,6 @@
-﻿using MultiThreadedFileAnalyzer.Interfaces;
+﻿using MultiThreadedFileAnalyzer.Constants;
+using MultiThreadedFileAnalyzer.Interfaces;
 using Spectre.Console;
-using System.IO;
 
 namespace MultiThreadedFileAnalyzer.Classes.Menu;
 internal abstract class UserPromptInt : IPromptable<int>
@@ -29,8 +29,8 @@ internal class UserPromptThreads : UserPromptInt
                 .Validate(value => value switch
                 {
                     null => ValidationResult.Success(),
-                    < 1 => ValidationResult.Error("Слишком мало! Нужно хотя бы 1"),
-                    > 16 => ValidationResult.Error("Слишком много! Максимум 16"),
+                    < ThreadConstraints.THREADS_MIN => ValidationResult.Error("Слишком мало! Нужно хотя бы 1"),
+                    > ThreadConstraints.THREADS_MAX => ValidationResult.Error("Слишком много! Максимум 16"),
                     _ => ValidationResult.Success(),
                 })
         );

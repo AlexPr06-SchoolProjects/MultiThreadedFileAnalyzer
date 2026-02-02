@@ -1,7 +1,6 @@
-﻿namespace MultiThreadedFileAnalyzer.Interfaces
+﻿namespace MultiThreadedFileAnalyzer.Interfaces;
+
+internal interface IDisplayable
 {
-    internal interface IDisplayable
-    {
-        void Display();
-    }
+    void Display();
 }

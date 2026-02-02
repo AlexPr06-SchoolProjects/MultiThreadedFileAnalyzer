@@ -1,5 +1,3 @@
 ﻿namespace MultiThreadedFileAnalyzer.Interfaces;
 
-internal interface IMenuOptionParams
-{
-}
+internal interface IMenuOptionParams { }

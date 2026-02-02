@@ -1,12 +1,6 @@
-﻿using MultiThreadedFileAnalyzer.Classes.App;
-using MultiThreadedFileAnalyzer.Classes.FileProcessor;
-using MultiThreadedFileAnalyzer.Interfaces;
+﻿using MultiThreadedFileAnalyzer.Interfaces;
 using Spectre.Console;
 using Spectre.Console.Rendering;
-using System.Collections.Concurrent;
-
-using FileProcessorClass =  MultiThreadedFileAnalyzer.Classes.FileProcessor.FileProcessor;
-
 
 namespace MultiThreadedFileAnalyzer.Classes.Menu;
 
@@ -24,89 +18,6 @@ internal abstract class MenuOption<T> : MenuOption where T : IMenuOptionParams
     abstract public void AddParams(T paramsObj);
 }
 
-
-class MenuOptionWorkParams : IMenuOptionParams
-{
-    public AppLayout appLayout { get; set; }
-    public UserPromptDirectory userPromptDirectory { get; set; }
-    public UserPromptThreads userPromptThreads { get; set; }
-    public FileProcessorClass fileProcessor { get; set; }
-    public FileStatisticsManager fileStatisticsManager { get; set; }       
-
-    public MenuOptionWorkParams(
-        AppLayout appLayout, 
-        UserPromptDirectory userPromptDirectory,
-        UserPromptThreads userPromptThreads,
-        FileProcessorClass fileProcessor,
-        FileStatisticsManager fileStatisticsManager)
-    {
-        this.appLayout = appLayout;
-        this.userPromptDirectory = userPromptDirectory;
-        this.userPromptThreads = userPromptThreads;
-        this.fileProcessor = fileProcessor;
-        this.fileStatisticsManager = fileStatisticsManager;
-    }
-}
-
-internal class MenuOptionWork : MenuOption<MenuOptionWorkParams>
-{
-    private MenuOptionWorkParams _menuOptionWorkParams;
-    public MenuOptionWork(string text) : base(text) {}
-    public override void AddParams(MenuOptionWorkParams @params)
-    {
-        _menuOptionWorkParams = @params;
-    }
-    public override void Execute()
-    {
-        _menuOptionWorkParams.appLayout.ShowCurrentDirectory();
-        string directoryPath = _menuOptionWorkParams.userPromptDirectory.Prompt();
-
-        if (directoryPath == string.Empty)
-        {
-            _menuOptionWorkParams.appLayout.ShowErrorMessage($"No directory path was provided.");
-            return;
-        }
-
-        _menuOptionWorkParams.fileProcessor.DirectoryPath = directoryPath;
-        int numberOfThreads = _menuOptionWorkParams.userPromptThreads.Prompt();
-        string[]? fileNames = null;
-        try
-        {
-            fileNames = _menuOptionWorkParams.fileProcessor.FindAllTxtFiles(directoryPath);
-        }
-        catch (Exception ex)
-        {
-            _menuOptionWorkParams.appLayout.ShowErrorMessage($"{ex.Message}"); 
-            return;
-        }
-        if (fileNames is null)
-        {
-            _menuOptionWorkParams.appLayout.ShowErrorMessage($"No files founded in provided directory");
-            return;
-        }
-
-        ConcurrentStack<FileTask>? stackOfFileTasks = _menuOptionWorkParams.fileStatisticsManager.PutFilesIntoStack(directoryPath, fileNames);
-        if (stackOfFileTasks is null)
-        {
-            _menuOptionWorkParams.appLayout.ShowErrorMessage($"No stack was created from files");
-            return;
-        }
-
-        foreach (var fileTask in stackOfFileTasks)
-            Console.WriteLine($"{fileTask.Name}");
- 
-        Semaphore semaphore = new Semaphore(0, numberOfThreads);
-        semaphore.Release(numberOfThreads);
-
-        var fileStatisticsList = _menuOptionWorkParams.fileProcessor.ProcessFilesInParallel(
-            semaphore, directoryPath, _menuOptionWorkParams .fileStatisticsManager, stackOfFileTasks, numberOfThreads
-            );
-
-        foreach (var file in fileStatisticsList)
-            Console.WriteLine($"{file.FileName}: Lines:{file.LinesCount} WordsCount: {file.WordsCount} CharactersCount: {file.CharactersCount}");
-
-    }
-}
 internal class Menu : IOwnRenderable
 {
     private List<MenuOption> _options;

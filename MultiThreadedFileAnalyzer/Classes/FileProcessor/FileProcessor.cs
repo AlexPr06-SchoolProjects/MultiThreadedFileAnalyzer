@@ -74,7 +74,7 @@ namespace MultiThreadedFileAnalyzer.Classes.FileProcessor
                             {
                                 fileStatisticsList.Add(fileStatistics);
                             }
-                            _serviceItemsPool.AddItem(new LogItem($"{threadId} обработал файл {task.Name}", AppColors.Service));
+                            _serviceItemsPool.AddItem(new LogItem($"[yellow]{threadId}[/] обработал файл [darkorange]{task.Name}[/]", AppColors.Service));
 
                         }
                         catch (Exception ex)

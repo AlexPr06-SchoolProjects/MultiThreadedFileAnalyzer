@@ -1,7 +1,10 @@
-﻿using MultiThreadedFileAnalyzer.Classes.Logs;
+﻿using MultiThreadedFileAnalyzer.Classes.FileProcessor;
+using MultiThreadedFileAnalyzer.Classes.Logs;
+using MultiThreadedFileAnalyzer.Constants;
+using MultiThreadedFileAnalyzer.Interfaces;
 using Spectre.Console;
 using Spectre.Console.Rendering;
-
+using System.Collections.Concurrent;
 using MenuClass = MultiThreadedFileAnalyzer.Classes.Menu.Menu;
 
 namespace MultiThreadedFileAnalyzer.Classes.App
@@ -103,7 +106,7 @@ namespace MultiThreadedFileAnalyzer.Classes.App
             );
         }
 
-        public void LogsRenderForLayout(LogPool logsPool, int colsAmount, string headerText)
+        public void RenderLogsForLayout(LogPool logsPool, int colsAmount, string headerText)
         {
             var renderable = new List<IRenderable>();
 
@@ -127,6 +130,18 @@ namespace MultiThreadedFileAnalyzer.Classes.App
             RefreshLayout();
         }
 
+        public void RenderResultTable(Table table, string panelHeader)
+        {
+            var panel = new Panel(table)
+                    .Header(panelHeader)
+                    .Expand()
+                    .RoundedBorder()
+                    .BorderColor(AppColors.TreePanel);
+
+            _leftBottomLayout.Update(panel);
+            RefreshLayout();
+        }
+
         public void LogsRenderIntoConsole(LogPool logsPool, int colsAmount, string headerText)
         {
             Panel panel = CreatePanelOfLogs(logsPool, colsAmount, headerText);
@@ -139,6 +154,12 @@ namespace MultiThreadedFileAnalyzer.Classes.App
             object locker = new object();
             List<Panel> panelsToRender = new List<Panel>();
             List<Task> tasks = new List<Task>();
+
+            Parallel.ForEach(logsPools, logs =>
+            {
+
+            });
+
             for (int i = 0; i < logsPools.Count; i++)
             {
                 var currentPool = logsPools[i];
@@ -232,6 +253,83 @@ namespace MultiThreadedFileAnalyzer.Classes.App
             };
 
             AnsiConsole.Write(panel);
+        }
+
+        public Tree GetTreeFromFiles(string rootDirectory, IProducerConsumerCollection<FileTask> fileTasks)
+        {
+            var tree = new Tree($"[yellow]{Markup.Escape(rootDirectory)}[/]");
+            var nodes = new Dictionary<string, TreeNode>();
+
+            foreach (var task in fileTasks)
+            {
+                string relativePath = task.Name;
+                string[] pathParts = relativePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+                IHasTreeNodes currentNode = tree;
+                string accumulatedPath = String.Empty;
+
+                for (int i = 0; i < pathParts.Length; ++i) 
+                {
+                    string part = pathParts[i];
+
+                    accumulatedPath = string.IsNullOrEmpty(accumulatedPath) ? part : Path.Combine(accumulatedPath, part);
+                    bool isFile = (i == pathParts.Length - 1);
+
+                    if (nodes.TryGetValue(accumulatedPath, out var existingNode))
+                        currentNode = existingNode;
+                    else
+                    {
+                        Color color = isFile ? AppColors.File : AppColors.Folder;
+                        string colorName = color.ToMarkup();
+                        string icon = isFile ? ":page_facing_up:" : ":open_file_folder:";
+
+                        TreeNode newNode = currentNode.AddNode($"{icon} [{colorName}]{Markup.Escape(part)}[/]");
+
+                        nodes[accumulatedPath] = newNode;
+                        currentNode = newNode;
+                    }
+                }
+            }
+
+            return tree;
+        }
+
+        public void RenderTree(Tree tree, string panelHeader)
+        {
+            Panel panel = new Panel(tree)
+                .Header(panelHeader)
+                .RoundedBorder()
+                .BorderColor(AppColors.TreePanel);
+
+            AnsiConsole.WriteLine();
+            AnsiConsole.Write(panel);
+            AnsiConsole.WriteLine();
+        }
+
+        public Table CreateResultTable(IEnumerable<IFileStatistics> fileTasks)
+        {
+            Table table = new Table();
+
+            table.Border(TableBorder.Rounded);
+            table.Title("[yellow]РЕЗУЛЬТАТ АНАЛИЗА ФАЙЛОВ[/]");
+            table.ShowRowSeparators();
+
+            table.AddColumn(new TableColumn("Path").Width(50).LeftAligned());
+            table.AddColumn(new TableColumn("[blue]Lines[/]").Centered());
+            table.AddColumn(new TableColumn("[blue]Words[/]").Centered());
+            table.AddColumn(new TableColumn("[blue]Chars[/]").Centered());
+
+            foreach(var task in fileTasks)
+            {
+                table.AddRow(
+                    Markup.Escape(task.FileName),               
+                    $"[green]{task.LinesCount}[/]",          
+                    $"[cyan]{task.WordsCount}[/]",           
+                    $"[magenta]{task.CharactersCount}[/]"    
+                );
+            }
+
+            return table;
         }
 
         public void ShowErrorMessage(string message) => UIHelper.ShowErrorMessage(message);

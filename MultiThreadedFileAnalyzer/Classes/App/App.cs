@@ -1,9 +1,9 @@
 ﻿using MultiThreadedFileAnalyzer.Classes.FileProcessor;
 using MultiThreadedFileAnalyzer.Classes.Logs;
 using MultiThreadedFileAnalyzer.Classes.Menu;
+using MultiThreadedFileAnalyzer.Classes.Menu.MenuOptions;
 using MultiThreadedFileAnalyzer.Interfaces;
-using System.Collections.Concurrent;
-
+using Spectre.Console;
 using FileProcessorClass = MultiThreadedFileAnalyzer.Classes.FileProcessor.FileProcessor;
 using MenuClass = MultiThreadedFileAnalyzer.Classes.Menu.Menu;
 
@@ -38,8 +38,8 @@ internal class App
         _appConditions = appConditions;
         _menu = new MenuClass();
         _menuOptions = new List<MenuOption>();
-        _menuOptions.Add(new MenuOptionWork("Начать работу"));
-        _menuOptions.Add(new MenuOptionWork("Очистить"));
+        _menuOptions.Add(new MenuOptionWork("Обработать txt файлы в указанной директории"));
+        _menuOptions.Add(new ClearConsoleOption("Очистить консоль"));
         _menu.Init(_menuOptions);
 
         _userPromptThreads = new UserPromptThreads();
@@ -66,7 +66,6 @@ internal class App
 
     public void SetAppConditions(List<ICondition> conditions) => _appConditions.AddSome(conditions);
 
-
     public void Run()
     {
         _appLayout.RenderLayout();
@@ -84,22 +83,29 @@ internal class App
                         MenuOptionWorkParams menuOptionWorkParams = new MenuOptionWorkParams(
                             _appLayout, _userPromptDirectory, _userPromptThreads, _fileProcessor, _fsm);
                         workOption.AddParams(menuOptionWorkParams);
-                    }    
-                    break;
-            }
-            selectedOption.Execute();
-            _appLayout.LogsRenderForLayout(_serviceItemsPool, 3, "[bold yellow] Последние логи [/]");
+                    }
 
-            bool showMoreLogs = _userPromptShowMoreLogs.Prompt();
-            if (showMoreLogs) {
-                List<LogPool> logs = new List<LogPool>() { _successfulItemsPool, _failedItemsPool, _serviceItemsPool, _allLogs  };
-                List<int> logsColumns = new List<int>() { 1, 1, 1, 1 };
-                List<string> logsColumnNames = new List<string>(){ "✅ УСПЕШНО", "❌ ОШИБКИ", "⚙ СЕРВИСНЫЕ",  "📝 ВСЕ ЛОГИ" };
-                _appLayout.RenderAllLogsIntoConsole(logs, logsColumns, logsColumnNames);
+                    selectedOption.Execute();
+                    _appLayout.RenderLogsForLayout(_serviceItemsPool, 3, "[bold yellow] Логи (возможно не все влезли) [/]");
+
+                    bool showMoreLogs = _userPromptShowMoreLogs.Prompt();
+                    if (showMoreLogs)
+                    {
+                        List<LogPool> logs = new List<LogPool>() { _successfulItemsPool, _failedItemsPool, _serviceItemsPool, _allLogs };
+                        List<int> logsColumns = new List<int>() { 1, 1, 1, 1 };
+                        List<string> logsColumnNames = new List<string>() { "✅ УСПЕШНО", "❌ ОШИБКИ", "⚙ СЕРВИСНЫЕ", "📝 ВСЕ ЛОГИ" };
+                        AnsiConsole.WriteLine();
+                        _appLayout.RenderAllLogsIntoConsole(logs, logsColumns, logsColumnNames);
+                        AnsiConsole.WriteLine();
+                    }
+                    break;
+                case 2:
+                    selectedOption.Execute();
+                    _appLayout.RefreshLayout();
+                    break;
             }
 
             _appCleaner.CleanAll();
-
             exitApp = _userPromptInApp.Prompt();
         }
     }
