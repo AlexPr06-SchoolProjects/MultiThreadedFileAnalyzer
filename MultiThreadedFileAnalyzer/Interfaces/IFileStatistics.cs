@@ -2,9 +2,9 @@
 
 internal interface IFileStatistics
 {
-    public string FileName { get; set; }
-    public int LinesCount { get; set; }
-    public int WordsCount { get; set; }
-    public int CharactersCount { get; set; }
+    public string FileName { get; init; }
+    public int LinesCount { get; init; }
+    public int WordsCount { get; init; }
+    public int CharactersCount { get; init; }
 }
 

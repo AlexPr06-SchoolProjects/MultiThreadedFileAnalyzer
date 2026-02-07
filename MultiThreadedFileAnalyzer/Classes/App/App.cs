@@ -1,113 +1,90 @@
-﻿using MultiThreadedFileAnalyzer.Classes.FileProcessor;
+﻿using Microsoft.Extensions.DependencyInjection;
 using MultiThreadedFileAnalyzer.Classes.Logs;
 using MultiThreadedFileAnalyzer.Classes.Menu;
 using MultiThreadedFileAnalyzer.Classes.Menu.MenuOptions;
 using MultiThreadedFileAnalyzer.Interfaces;
-using Spectre.Console;
-using FileProcessorClass = MultiThreadedFileAnalyzer.Classes.FileProcessor.FileProcessor;
-using MenuClass = MultiThreadedFileAnalyzer.Classes.Menu.Menu;
 
 namespace MultiThreadedFileAnalyzer.Classes.App;
 
-internal class App
+internal sealed class App(
+         AppLoopConditions appConditions,
+         IMenuOptionFactory optionFactory,
+         AppCleaner appCleaner,
+         AppLayout appLayout,
+         [FromKeyedServices("success")] LogPool successPool,
+         [FromKeyedServices("failed")] LogPool failedPool,
+         [FromKeyedServices("service")] LogPool servicePool,
+         [FromKeyedServices("all")] LogPool allLogs,
+         [FromKeyedServices("ExitConfirmationPrompt")] IUserPrompt<bool> promptInApp,
+         [FromKeyedServices("UserPromptShowMoreLogs")]IUserPrompt<bool> promptShowMoreLogs
+   )
 {
-    private AppCleaner _appCleaner;
-    private AppLayout _appLayout;
-    private AppLoopConditions _appConditions;
-    private MenuClass _menu;
-    private List<MenuOption> _menuOptions;
+    private readonly List<MenuOption> _menuOptions =
+        [
+            optionFactory.CreateWorkOption("Обработать txt файлы"),
+            optionFactory.CreateClearOption("Очистить консоль")
+        ];
 
-    private UserPromptThreads _userPromptThreads;
-    private UserPromptDirectory _userPromptDirectory;
-    private UserPromptBoolInApp _userPromptInApp;
-    private UserPromptShowMoreLogs _userPromptShowMoreLogs;
+    private readonly MenuClass _menu =  new MenuClass( [
+        optionFactory.CreateWorkOption("Обработать txt файлы"),
+        optionFactory.CreateClearOption("Очистить консоль")
+    ]);
 
-    private FileStatisticsManager _fsm;
-
-    private LogPool _failedItemsPool;
-    private LogPool _successfulItemsPool;
-    private LogPool _serviceItemsPool;
-    private LogPool _allLogs;
-
-    private FileProcessorClass _fileProcessor;
-
-    public App(AppLoopConditions appConditions)
+    private void Init()
     {
-        _appCleaner = new AppCleaner();
-        _appLayout = new AppLayout();
-        _appConditions = appConditions;
-        _menu = new MenuClass();
-        _menuOptions = new List<MenuOption>();
-        _menuOptions.Add(new MenuOptionWork("Обработать txt файлы в указанной директории"));
-        _menuOptions.Add(new ClearConsoleOption("Очистить консоль"));
-        _menu.Init(_menuOptions);
-
-        _userPromptThreads = new UserPromptThreads();
-        _userPromptDirectory = new UserPromptDirectory();
-        _userPromptInApp = new UserPromptBoolInApp();
-        _userPromptShowMoreLogs = new UserPromptShowMoreLogs();
-
-        _fsm = new FileStatisticsManager();
-
-        _failedItemsPool = new LogPool();
-        _successfulItemsPool = new LogPool();
-        _serviceItemsPool = new LogPool();
-        _allLogs = new LogPool();
-
-        _fileProcessor = new FileProcessorClass(_failedItemsPool, _successfulItemsPool, _serviceItemsPool, _allLogs, string.Empty);
-
-
-
-        _appCleaner.AddSome(new List<ICleanable>()
-        {
-            _failedItemsPool, _successfulItemsPool, _serviceItemsPool, _allLogs
+        appCleaner.AddSome(new List<ICleanable>()
+        { 
+            successPool, failedPool, servicePool, allLogs
         });
     }
 
-    public void SetAppConditions(List<ICondition> conditions) => _appConditions.AddSome(conditions);
+    public void SetAppConditions(List<ICondition> conditions) => appConditions.AddSome(conditions);
 
     public void Run()
     {
-        _appLayout.RenderLayout();
-        _appLayout.UpdateMenu(_menu);
+        Init();
+        appLayout.UpdateMenu(_menu.OwnRender());
+        appLayout.Refresh();
         bool exitApp = false;
-        while (_appConditions.AreApplied() && !exitApp)
+
+        while (appConditions.AreApplied() && !exitApp)
         {
-            int userOption = _menu.AskForMenuOption(_menuOptions.Count);
-            var selectedOption = _menuOptions[userOption - 1];
-            switch (userOption)
-            {
-                case 1:
-                    if (selectedOption is MenuOptionWork workOption)
-                    {
-                        MenuOptionWorkParams menuOptionWorkParams = new MenuOptionWorkParams(
-                            _appLayout, _userPromptDirectory, _userPromptThreads, _fileProcessor, _fsm);
-                        workOption.AddParams(menuOptionWorkParams);
-                    }
+            int userOption = _menu.AskForMenuOption(this._menuOptions.Count) - 1;
+            var selectedOption = this._menuOptions[userOption];
 
-                    selectedOption.Execute();
-                    _appLayout.RenderLogsForLayout(_serviceItemsPool, 3, "[bold yellow] Логи (возможно не все влезли) [/]");
-
-                    bool showMoreLogs = _userPromptShowMoreLogs.Prompt();
-                    if (showMoreLogs)
-                    {
-                        List<LogPool> logs = new List<LogPool>() { _successfulItemsPool, _failedItemsPool, _serviceItemsPool, _allLogs };
-                        List<int> logsColumns = new List<int>() { 1, 1, 1, 1 };
-                        List<string> logsColumnNames = new List<string>() { "✅ УСПЕШНО", "❌ ОШИБКИ", "⚙ СЕРВИСНЫЕ", "📝 ВСЕ ЛОГИ" };
-                        AnsiConsole.WriteLine();
-                        _appLayout.RenderAllLogsIntoConsole(logs, logsColumns, logsColumnNames);
-                        AnsiConsole.WriteLine();
-                    }
-                    break;
-                case 2:
-                    selectedOption.Execute();
-                    _appLayout.RefreshLayout();
-                    break;
-            }
-
-            _appCleaner.CleanAll();
-            exitApp = _userPromptInApp.Prompt();
+            selectedOption.Execute();
+            HandlePostExecute(selectedOption);
+            if (promptInApp.Prompt()) break;
+            appCleaner.CleanAll();
         }
+    }
+
+    private void HandlePostExecute(MenuOption selectedOption)
+    {
+        if (selectedOption is MenuOptionWork)
+        {
+            if (selectedOption.NeedsLogRendering)
+            {
+                appLayout.RenderLogs(servicePool, "[bold yellow] Логи (возможно не все влезли) [/]");
+            }
+               
+            if (promptShowMoreLogs.Prompt())
+            {
+                RenderFullLogs();
+            }
+        }
+        else if (selectedOption is ClearConsoleOption)
+        {
+            appLayout.Refresh();
+        }
+    }
+
+    private void RenderFullLogs()
+    {
+        var logs = new List<LogPool> { successPool, failedPool, servicePool, allLogs };
+        var names = new List<string> { "✅ УСПЕШНО", "❌ ОШИБКИ", "⚙ СЕРВИСНЫЕ", "📝 ВСЕ ЛОГИ" };
+        List<int> logsColumns = new List<int>() { 1, 1, 1, 1 };
+        appLayout.RenderAllLogsIntoConsole(logs, logsColumns, names);
     }
 }
 

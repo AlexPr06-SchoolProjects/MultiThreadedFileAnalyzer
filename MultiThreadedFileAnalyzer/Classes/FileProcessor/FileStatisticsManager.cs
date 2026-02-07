@@ -4,66 +4,32 @@ using System.Text.RegularExpressions;
 
 namespace MultiThreadedFileAnalyzer.Classes.FileProcessor;
 
-internal class FileStatisticsManager : IAnalizable, IMenuOptionParams
+internal partial class FileStatisticsManager : IFileStatisticsManager
 {
+    [GeneratedRegex(@"[\p{L}\d]+(-[\p{L}\d]+)*")]
+    private static partial Regex WordRegex();
     public IFileStatistics Analize(string filePath)
-    {
-        IFileStatistics analizedFile = AnalyzeFile(filePath);
-        return analizedFile;
-    }
+        => AnalyzeInternal(filePath, Path.GetFileName(filePath));
 
     public IFileStatistics Analize(string filePath, string fileName)
-    {
-        IFileStatistics analizedFile = AnalyzeFile(filePath, fileName);
-        return analizedFile;
-    }
+        => AnalyzeInternal(filePath, fileName);
 
-    private IFileStatistics AnalyzeFile(string filePath)
+    public IFileStatistics AnalyzeInternal(string filePath, string fileName)
     {
-        string fileName = Path.GetFileName(filePath);
-        IFileStatistics fileStatistics = new FileStatistics(fileName);
-        string pattern = @"[\p{L}\d]+(-[\p{L}\d]+)*";
-        Regex regex = new Regex(pattern);
-        using (var reader = new StreamReader(filePath))
+        int linesCount = 0, wordsCount = 0, charactersCount = 0;
+        var regex = WordRegex();
+
+        using var reader = new StreamReader(filePath);
+        string? line;
+
+        while ((line = reader.ReadLine()) != null)
         {
-            string? line;
-            while ((line = reader.ReadLine()) != null)
-            {
-                fileStatistics.LinesCount++;
-
-                fileStatistics.WordsCount += regex.Matches(line).Count;
-
-                foreach (char c in line)
-                {
-                    if (!char.IsWhiteSpace(c)) fileStatistics.CharactersCount++;
-                }
-            }
+            linesCount++;
+            wordsCount += regex.Matches(line).Count;
+            charactersCount += CountNonWhiteSpaceChars(line);
         }
 
-        return fileStatistics;
-    }
-
-    private IFileStatistics AnalyzeFile(string filePath, string fileName) { 
-        IFileStatistics fileStatistics = new FileStatistics(fileName);
-        string pattern = @"[\p{L}\d]+(-[\p{L}\d]+)*";
-        Regex regex = new Regex(pattern);
-        using (var reader = new StreamReader(filePath))
-        {
-            string? line;
-            while ((line = reader.ReadLine()) != null)
-            {
-                fileStatistics.LinesCount++;
-
-                fileStatistics.WordsCount += regex.Matches(line).Count;
-
-                foreach (char c in line)
-                {
-                    if (!char.IsWhiteSpace(c)) fileStatistics.CharactersCount++;
-                }
-            }
-        }
-
-        return fileStatistics;
+        return new FileStatistics(fileName, linesCount, wordsCount, charactersCount);
     }
 
     public ConcurrentStack<FileTask>? PutFilesIntoStack(string directoryPath, string[] files)
@@ -71,18 +37,28 @@ internal class FileStatisticsManager : IAnalizable, IMenuOptionParams
         if (!Directory.Exists(directoryPath))
             return null;
 
-        string rootPath = Path.GetFullPath(directoryPath);
-        ConcurrentStack<FileTask> fileNamesStack = new ConcurrentStack<FileTask> { };
+        string fullRootPath = Path.GetFullPath(directoryPath);
+        ConcurrentStack<FileTask> stack = new ConcurrentStack<FileTask>();
         foreach (string relativePath in files)
         {
-            string fullPath = Path.Combine(rootPath, relativePath);
+            string fullPath = Path.Combine(fullRootPath, relativePath);
             if (File.Exists(fullPath))
             {
-                fileNamesStack.Push(new FileTask(relativePath));
+                stack.Push(new FileTask(relativePath));
             }
         }
 
-        return fileNamesStack;
+        return stack;
+    }
+
+    private static int CountNonWhiteSpaceChars(string line)
+    {
+        int count = 0;
+        foreach (char c in line)
+        {
+            if (!char.IsWhiteSpace(c)) count++;
+        }
+        return count;
     }
 }
 

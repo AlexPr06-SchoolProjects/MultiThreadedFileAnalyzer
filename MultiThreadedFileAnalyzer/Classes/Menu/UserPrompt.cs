@@ -3,24 +3,10 @@ using MultiThreadedFileAnalyzer.Interfaces;
 using Spectre.Console;
 
 namespace MultiThreadedFileAnalyzer.Classes.Menu;
-internal abstract class UserPromptInt : IPromptable<int>
-{
-    abstract public int Prompt();
-}
 
-internal abstract class UserPromptString : IPromptable<string>
+internal sealed class UserPromptThreads : IUserPrompt<int>
 {
-    abstract public string Prompt();
-}
-
-internal abstract class UserPromptBool : IPromptable<bool>
-{
-    public abstract bool Prompt();
-}
-
-internal class UserPromptThreads : UserPromptInt
-{
-    public override int Prompt()
+    public int Prompt()
     {
         int? threads = AnsiConsole.Prompt(
             new TextPrompt<int?>("Сколько [green]потоков[/] задействовать?")
@@ -29,8 +15,8 @@ internal class UserPromptThreads : UserPromptInt
                 .Validate(value => value switch
                 {
                     null => ValidationResult.Success(),
-                    < ThreadConstraints.THREADS_MIN => ValidationResult.Error("Слишком мало! Нужно хотя бы 1"),
-                    > ThreadConstraints.THREADS_MAX => ValidationResult.Error("Слишком много! Максимум 16"),
+                    < ThreadConstraints.THREADS_MIN => ValidationResult.Error($"Слишком мало! Нужно хотя бы {ThreadConstraints.THREADS_MIN}"),
+                    > ThreadConstraints.THREADS_MAX => ValidationResult.Error($"Слишком много! Максимум {ThreadConstraints.THREADS_MAX}"),
                     _ => ValidationResult.Success(),
                 })
         );
@@ -39,9 +25,9 @@ internal class UserPromptThreads : UserPromptInt
     }
 }
 
-internal class UserPromptDirectory : UserPromptString
+internal sealed class UserPromptDirectory : IUserPrompt<string>
 {
-    public override string Prompt()
+    public string Prompt()
     {
         string directoryPath = AnsiConsole.Prompt(
             new TextPrompt<string>("Выберите [green]директорию[/], которую желаете задействовать? (exit)")
@@ -70,26 +56,12 @@ internal class UserPromptDirectory : UserPromptString
     }
 }
 
-internal class UserPromptBoolInApp : UserPromptBool
+internal sealed class ExitConfirmationPrompt : IUserPrompt<bool>
 {
-    public override bool Prompt()
-    {
-        var confirmed = AnsiConsole.Confirm("Выйти из приложения?");
-        if (confirmed)
-            return true;
-        else
-            return false;
-    }
+    public bool Prompt() => AnsiConsole.Confirm("Выйти из приложения?");
 }
 
-internal class UserPromptShowMoreLogs : UserPromptBool
+internal sealed class UserPromptShowMoreLogs : IUserPrompt<bool>
 {
-    public override bool Prompt()
-    {
-        var confirmed = AnsiConsole.Confirm("Показать другие логи?");
-        if (confirmed)
-            return true;
-        else
-            return false;
-    }
+    public bool Prompt() => AnsiConsole.Confirm("Показать другие логи?");
 }

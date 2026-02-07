@@ -3,7 +3,7 @@ using System.Collections.Concurrent;
 
 namespace MultiThreadedFileAnalyzer.Classes.App
 {
-    internal class AppCleaner
+    internal sealed class AppCleaner
     {
         ConcurrentStack<ICleanable> _items;
 

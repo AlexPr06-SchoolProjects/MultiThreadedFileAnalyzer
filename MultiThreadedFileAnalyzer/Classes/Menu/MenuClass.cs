@@ -4,38 +4,17 @@ using Spectre.Console.Rendering;
 
 namespace MultiThreadedFileAnalyzer.Classes.Menu;
 
-internal abstract class MenuOption : IExecutable
+internal abstract class MenuOption(string text) : IExecutable
 {
-    public string Text { get; set; }
-    public MenuOption(string text) => Text = text;
+    public string Text { get; } = text;
     public abstract void Execute();
-    public override string ToString() => $"  [ > ] {Text}";
+    public virtual bool NeedsLogRendering => false;
+    public virtual bool NeedsLayoutRefresh => false;
 }
 
-internal abstract class MenuOption<T> : MenuOption where T : IMenuOptionParams
+internal sealed class MenuClass(IEnumerable<MenuOption> options) : IOwnRenderable
 {
-    public MenuOption(string text) : base(text) { }
-    abstract public void AddParams(T paramsObj);
-}
-
-internal class Menu : IOwnRenderable
-{
-    private List<MenuOption> _options;
-    public Menu() {
-        _options = new List<MenuOption>();
-    }
-    public Menu(List<MenuOption> options)
-    {
-        _options = options;
-    }
-    public void AddOption(MenuOption option) => _options.Add(option);
-
-    public void Init(List<MenuOption> menuOptions)
-    {
-        foreach (var option in menuOptions)
-            _options.Add(option);
-    }
-
+    private readonly List<MenuOption> _options = options.ToList();
 
     public IRenderable OwnRender()
     {

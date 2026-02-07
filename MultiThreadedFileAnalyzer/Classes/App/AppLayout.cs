@@ -5,129 +5,52 @@ using MultiThreadedFileAnalyzer.Interfaces;
 using Spectre.Console;
 using Spectre.Console.Rendering;
 using System.Collections.Concurrent;
-using MenuClass = MultiThreadedFileAnalyzer.Classes.Menu.Menu;
+
+using MultiThreadedFileAnalyzer.Classes.Builders;
 
 namespace MultiThreadedFileAnalyzer.Classes.App
 {
 
-    internal class AppLayout
+    internal sealed class AppLayout
     {
-        private Layout _rootLayout;
-        private Layout _rootUpperLayout;
-        private Layout _rootBottomLayout;
-        private Layout _leftLayout;
-        public readonly Layout _rightLayout;
-        public readonly Layout _leftUpperLayout;
-        public readonly Layout _leftBottomLayout;
-
-        private string _rootLayoutName;
-        private string _rootUpperLayoutName;
-        private string _rootBottomLayoutName;
-        private string _leftLayoutName;
-        private string _rightLayoutName;
-        private string _leftUpperLayoutName;
-        private string _leftBottomLayoutName;
-
+        private readonly Layout _root;
+        private readonly Layout _menuZone;
+        private readonly Layout _resultsZone;
+        private readonly Layout _logsZone;
 
         public AppLayout()
         {
-            _rootLayoutName = "Root";
-            _rootUpperLayoutName = "Upper";
-            _rootBottomLayoutName = "Bottom";
-            _leftLayoutName = "Left";
-            _rightLayoutName = "Right";
-            _leftUpperLayoutName = "Left_Upper";
-            _leftBottomLayoutName = "Left_Bottom";
-
-            _rootLayout = new Layout(_rootLayoutName);
-            _rootUpperLayout = new Layout(_rootUpperLayoutName);
-            _rootBottomLayout = new Layout(_rootBottomLayoutName);
-            _leftLayout = new Layout(_leftLayoutName);
-            _rightLayout = new Layout(_rightLayoutName);
-            _leftUpperLayout = new Layout(_leftUpperLayoutName);
-            _leftBottomLayout = new Layout(_leftBottomLayoutName);
+            var (root, menu, results, logs) = LayoutBuilder.Build();
+            _root = root;
+            _menuZone = menu;
+            _resultsZone = results;
+            _logsZone = logs;
         }
 
-        public void UpdateMenu(MenuClass menu)
+        public void RunLive(Action<LiveDisplayContext> action) => AnsiConsole.Live(_root).AutoClear(false).Start(action);
+        
+        public void UpdateMenu(IRenderable content) => _menuZone.Update(content);
+        public void UpdateResults(IRenderable content) => _resultsZone.Update(content);
+        public void UpdateLogs(IRenderable content) => _logsZone.Update(content);
+
+        public void Refresh() => AnsiConsole.Write(_root);
+
+        public void RenderLogs(LogPool logsPool, string headerText)
         {
-            _leftUpperLayout.Update(menu.OwnRender());
-            RefreshLayout();
-        }
-        public void RefreshLayout()
-        {
-            AnsiConsole.Live(_rootLayout).Start(ctx =>
-            {
-                ctx.Refresh();
-            });
-        }
+            List<IRenderable> logItems = logsPool.AllLogs.Select(l => l.Log()).ToList();
 
-        public void RenderLayout()
-        {
-            _rootLayout
-                .SplitRows(
-                    _rootUpperLayout.Size(5),
-                    _rootBottomLayout
-                        .SplitColumns(
-                            _leftLayout.Size(50)
-                                .SplitRows(
-                                    _leftUpperLayout,
-                                    _leftBottomLayout
-                                ),
-                            _rightLayout
-                        )
-                );
+            if (!logItems.Any()) return;
 
-            _rootUpperLayout.Update(
-                 new Panel(new Markup("[bold cyan1]=== МНОГОПОТОЧНЫЙ ПОДСЧЕТ ФАЙЛОВ ===[/]").Centered())
-                    .Expand()
-                    .BorderColor(Color.DarkGoldenrod)
-                    .Padding(0, 1, 0, 1)
-            );
+            var grid = new Grid().AddColumn();
+            foreach (var log in logItems) grid.AddRow(log);
 
-            _leftUpperLayout.Update(
-                new Panel(new Text("Меню"))
-                    .Header("Меню")
-                    .Expand()
-                    .BorderColor(Color.DarkGoldenrod)
-            );
+            var panel = new Panel(grid)
+                .Header(headerText)
+                .Expand()
+                .RoundedBorder()
+                .BorderColor(Color.DarkSeaGreen1_1);
 
-            _leftBottomLayout.Update(
-                new Panel(new Text("Результат"))
-                    .Header("Здесь появится результат")
-                    .Expand()
-                    .BorderColor(Color.DarkKhaki)
-            );
-
-            _rightLayout["Right"].Update(
-                new Panel(new Text("Логи"))
-                    .Header("Логи")
-                    .Expand()
-                    .BorderColor(Color.DarkSeaGreen1_1)
-            );
-        }
-
-        public void RenderLogsForLayout(LogPool logsPool, int colsAmount, string headerText)
-        {
-            var renderable = new List<IRenderable>();
-
-            foreach (var log in logsPool._loggableItems) 
-                if (log is not null)
-                    renderable.Add(log.Log());
-            if (renderable.Count == 0)
-                _rightLayout.Update(new Panel("Логов пока нет...").Expand());
-            else
-            {
-                Grid grid = CreateGrid(colsAmount, renderable);
-                var panel = new Panel(grid)
-                    .Header(headerText)
-                    .Expand()
-                    .BorderColor(Color.DarkSeaGreen1_1)
-                    .RoundedBorder();
-
-                _rightLayout.Update(panel);
-            }
-
-            RefreshLayout();
+            UpdateLogs(panel);
         }
 
         public void RenderResultTable(Table table, string panelHeader)
@@ -138,8 +61,7 @@ namespace MultiThreadedFileAnalyzer.Classes.App
                     .RoundedBorder()
                     .BorderColor(AppColors.TreePanel);
 
-            _leftBottomLayout.Update(panel);
-            RefreshLayout();
+            _resultsZone.Update(panel);
         }
 
         public void LogsRenderIntoConsole(LogPool logsPool, int colsAmount, string headerText)
@@ -185,14 +107,16 @@ namespace MultiThreadedFileAnalyzer.Classes.App
                 grid.AddColumn(new GridColumn());
 
             grid.AddRow(panelsToRender.ToArray());
+            AnsiConsole.WriteLine();
             AnsiConsole.Write(grid);
+            AnsiConsole.WriteLine();
         }
 
         private Panel CreatePanelOfLogs(LogPool logsPool, int colsAmount, string headerText)
         {
             var renderables = new List<IRenderable>();
 
-            foreach (var log in logsPool._loggableItems)
+            foreach (var log in logsPool.AllLogs)
                 if (log is not null)
                     renderables.Add(log.Log());
             if (renderables.Count == 0)

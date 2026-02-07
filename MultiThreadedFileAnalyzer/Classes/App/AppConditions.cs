@@ -62,6 +62,5 @@ namespace MultiThreadedFileAnalyzer.Classes.App
                     return false;
             return true;
         }
-
     }
 }
